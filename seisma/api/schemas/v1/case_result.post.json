@@ -1,0 +1,15 @@
+{
+    "type": "object",
+    "properties": {
+        "status": {
+          "type": "string",
+          "pattern": "^passed|skipped|failed|error$"
+        },
+        "runtime": {"type": "number"},
+        "reason": {"type": "string"},
+        "metadata": {
+            "type": "object"
+        }
+    },
+    "required": ["status", "runtime"]
+}

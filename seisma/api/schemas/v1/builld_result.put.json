@@ -1,0 +1,22 @@
+{
+    "type": "object",
+    "properties": {
+        "runtime": {"type": "number"},
+        "was_success": {"type": "boolean"},
+        "tests_count": {"type": "number"},
+        "success_count": {"type": "number"},
+        "fail_count": {"type": "number"},
+        "error_count": {"type": "number"},
+        "metadata": {
+            "type": "object"
+        }
+    },
+    "required": [
+        "runtime",
+        "was_success",
+        "tests_count",
+        "success_count",
+        "fail_count",
+        "error_count"
+    ]
+}

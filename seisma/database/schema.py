@@ -39,10 +39,18 @@ class Case(alchemy.Model, ModelMixin):
 
     __tablename__ = 'case'
 
+    __table_args__ = (
+        UniqueConstraint(
+            'name',
+            'job_id',
+            name='case_name',
+        ),
+    )
+
     id = alchemy.Column(alchemy.Integer, autoincrement=True, primary_key=True)
     job_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('job.id'), nullable=False)
     created = alchemy.Column(alchemy.Date(), nullable=False, default=date.today)
-    name = alchemy.Column(alchemy.String(255), nullable=False, index=True)
+    name = alchemy.Column(alchemy.String(255), nullable=False)
     description = alchemy.Column(alchemy.Text(), nullable=False, default='')
 
     to_dict = ObjectConverter(

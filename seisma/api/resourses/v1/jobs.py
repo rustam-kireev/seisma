@@ -4,11 +4,11 @@ from http import HTTPStatus as statuses
 
 import flask
 
-from ..result import make_result
-from ..utils import api_location
-from ..resource import ApiResource
-from ..utils import paginated_query
-from ...database import schema as db
+from ...result import make_result
+from ...utils import api_location
+from ...resource import ApiResource
+from ...utils import paginated_query
+from ....database import schema as db
 
 
 VERSION = 1

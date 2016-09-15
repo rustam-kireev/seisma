@@ -4,13 +4,13 @@ from http import HTTPStatus as statuses
 
 import flask
 
-from .. import string
-from ..result import make_result
-from ..utils import api_location
-from ..resource import ApiResource
-from ..utils import paginated_query
-from ...database import schema as db
-from ...constants import API_AUTO_CREATION_PARAM
+from ... import string
+from ...result import make_result
+from ...utils import api_location
+from ...resource import ApiResource
+from ...utils import paginated_query
+from ....database import schema as db
+from ....constants import API_AUTO_CREATION_PARAM
 
 
 VERSION = 1

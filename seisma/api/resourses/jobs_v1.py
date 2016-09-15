@@ -46,9 +46,7 @@ def create_job(job_name):
 
     JSON params
 
-        * name: job's name (string, required)
-            Warning! it's unique name.
-        * description: description of job (string, required)
+        * description: description of job (string)
     """
     json = flask.request.get_json()
 

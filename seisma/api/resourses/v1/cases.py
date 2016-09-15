@@ -3,6 +3,7 @@
 from http import HTTPStatus as statuses
 
 import flask
+from sqlalchemy import desc
 
 from ... import string
 from ...result import make_result
@@ -39,7 +40,11 @@ def get_case_from_job(job_name, case_name):
             ), statuses.OK
 
 
-@resource.route('/jobs/<string:job_name>/cases/<string:case_name>', methods=['POST'], schema='case.post.json')
+@resource.route(
+    '/jobs/<string:job_name>/cases/<string:case_name>',
+    methods=['POST'],
+    schema='case.post.json',
+)
 def add_case_to_job(job_name, case_name):
     """
     Add case to job, statistic about case stored separated of case data.
@@ -91,13 +96,14 @@ def get_cases_from_job(job_name):
 
     if job:
         query = db.Case.query.filter_by(job_id=job.id)
+        query = query.order_by(desc(db.Case.created))
         query = paginated_query(query, flask.request)
 
         return make_result(
             query.all(),
+            job=job,
             total_count=query.total_count,
             current_count=query.current_count,
-            job=job,
         ), statuses.OK
 
 
@@ -149,6 +155,7 @@ def get_stats_of_case_from_job(job_name, case_name):
             elif runtime_less is not None:
                 query = query.filter(db.CaseResult.runtime < string.to_float(runtime_less))
 
+            query = query.order_by(desc(db.CaseResult.date))
             query = paginated_query(query, flask.request)
 
             return make_result(
@@ -299,6 +306,7 @@ def get_cases_stats_from_job(job_name):
         elif runtime_less is not None:
             query = query.filter(db.CaseResult.runtime < string.to_float(runtime_less))
 
+        query = query.order_by(desc(db.CaseResult.date))
         query = paginated_query(query, flask.request)
 
         return make_result(

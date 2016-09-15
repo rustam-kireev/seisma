@@ -3,6 +3,7 @@
 from http import HTTPStatus as statuses
 
 import flask
+from sqlalchemy import desc
 
 from ...result import make_result
 from ...utils import api_location
@@ -31,6 +32,7 @@ def get_jobs():
         * to: for pagination. (integer)
     """
     query = db.Job.query.filter_by(is_active=True)
+    query = query.order_by(desc(db.Job.created))
     query = paginated_query(query, flask.request)
 
     return make_result(
@@ -64,7 +66,9 @@ def create_job(job_name):
     return make_result(
         job,
         location=api_location(
-            '/jobs/{}', job_name, version=VERSION,
+            '/jobs/{}',
+            job_name,
+            version=VERSION,
         ),
     ), statuses.CREATED
 

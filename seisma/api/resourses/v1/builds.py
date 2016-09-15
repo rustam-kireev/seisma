@@ -3,6 +3,7 @@
 from http import HTTPStatus as statuses
 
 import flask
+from sqlalchemy import desc
 
 from ... import string
 from ...result import make_result
@@ -64,6 +65,7 @@ def get_builds_from_job(job_name):
             filters['was_success'] = string.to_bool(was_success)
 
         query = db.Build.query.filter_by(**filters)
+        query = query.order_by(desc(db.Build.date))
 
         if date_from is not None:
             date_from = string.to_datetime(date_from, no_time=True)

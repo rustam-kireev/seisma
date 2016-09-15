@@ -55,4 +55,4 @@ else:
 os.environ.setdefault(CONFIG_ENV_NAME, DEFAULT_CONFIG)
 
 
-API_AUTO_CREATION_PARAM = 'auto_creation'
+API_AUTO_CREATION_PARAM = 'autocreation'

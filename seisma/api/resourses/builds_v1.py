@@ -122,7 +122,7 @@ def start_build(job_name, build_name):
     job = db.Job.get_by_name(job_name)
 
     if not job and flask.request.args.get(API_AUTO_CREATION_PARAM):
-        job = db.Job.create(name=job_name)
+        job = db.Job.create(name=job_name, is_active=True)
 
     if job:
         json = flask.request.get_json()

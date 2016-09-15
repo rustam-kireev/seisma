@@ -8,6 +8,8 @@ from ... import wsgi
 
 class BaseApiTestCse(unittest.TestCase):
 
+    maxDiff = None
+
     def setUp(self):
         self.app = wsgi.app.test_client()
 

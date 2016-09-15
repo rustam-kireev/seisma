@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from urllib.parse import quote
+
 
 DEFAULT_RECORDS_ON_PAGE = 100
 
@@ -15,3 +17,12 @@ def paginated_query(query, request):
     query.current_count = query.count()
 
     return query
+
+
+def api_location(path, *args, **kwargs):
+    version = kwargs['version']
+
+    return '/api/v{}{}'.format(
+        version,
+        path.format(*[quote(a) for a in args]),
+    )

@@ -5,12 +5,16 @@ from http import HTTPStatus as statuses
 import flask
 
 from ..result import make_result
+from ..utils import api_location
 from ..resource import ApiResource
 from ..utils import paginated_query
 from ...database import schema as db
 
 
-resource = ApiResource(__name__, version=1)
+VERSION = 1
+
+
+resource = ApiResource(__name__, version=VERSION)
 
 
 @resource.route('/jobs', methods=['GET'])
@@ -57,7 +61,12 @@ def create_job(job_name):
     }
     job = db.Job.create(**data)
 
-    return make_result(job), statuses.CREATED
+    return make_result(
+        job,
+        location=api_location(
+            '/jobs/{}', job_name, version=VERSION,
+        ),
+    ), statuses.CREATED
 
 
 @resource.route('/jobs/<string:job_name>', methods=['GET'])

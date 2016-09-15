@@ -6,13 +6,17 @@ import flask
 
 from .. import string
 from ..result import make_result
+from ..utils import api_location
 from ..resource import ApiResource
 from ..utils import paginated_query
 from ...database import schema as db
 from ...constants import API_AUTO_CREATION_PARAM
 
 
-resource = ApiResource(__name__, version=1)
+VERSION = 1
+
+
+resource = ApiResource(__name__, version=VERSION)
 
 
 @resource.route('/jobs/<string:job_name>/builds', methods=['GET'])
@@ -109,7 +113,7 @@ def start_build(job_name, build_name):
     Start a new build.
     The mission of command is initialization a build what will glue case results.
     All statistic may be written with stop command.
-    When build is created then it status is running while a build does'n stop.
+    When build is created then it status is running while a build does'n stopped.
 
     METHOD: POST
     PATH: /api/v1/jobs/<string:job_name>/builds/<string:build_name>/start
@@ -149,6 +153,11 @@ def start_build(job_name, build_name):
         return make_result(
             build,
             job=job,
+            location=api_location(
+                '/jobs/{}/builds/{}',
+                job_name, build_name,
+                version=VERSION,
+            ),
         ), statuses.CREATED
 
 
@@ -199,6 +208,11 @@ def stop_build(job_name, build_name):
             return make_result(
                 build,
                 job=job,
+                location=api_location(
+                    '/jobs/{}/builds/{}',
+                    job_name, build_name,
+                    version=VERSION,
+                ),
             ), statuses.OK
 
 

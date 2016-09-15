@@ -141,38 +141,22 @@ class TestFullCycle(BaseApiTestCse):
         self.assertDictEqual(case_result['result']['metadata'], data['metadata'])
 
     def test_10_get_job(self):
-        resp = self.get('/api/v1/jobs/{}'.format(job['result']['name']))
+        resp = self.get(job['extra'].pop('location'))
         self.assertEqual(resp.status_code, 200)
         self.assertDictEqual(job, self.get_json(resp))
 
     def test_11_get_case(self):
-        resp = self.get(
-            '/api/v1/jobs/{}/cases/{}'.format(
-                job['result']['name'],
-                case['result']['name'],
-            ),
-        )
+        resp = self.get(case['extra'].pop('location'))
         self.assertEqual(resp.status_code, 200)
         self.assertDictEqual(case, self.get_json(resp))
 
     def test_12_get_build(self):
-        resp = self.get(
-            '/api/v1/jobs/{}/builds/{}'.format(
-                job['result']['name'],
-                build['result']['name'],
-            ),
-        )
+        resp = self.get(build['extra'].pop('location'))
         self.assertEqual(resp.status_code, 200)
         self.assertDictEqual(build, self.get_json(resp))
 
     def test_13_get_case_result(self):
-        resp = self.get(
-            '/api/v1/jobs/{}/builds/{}/cases/{}'.format(
-                job['result']['name'],
-                build['result']['name'],
-                case['result']['name'],
-            ),
-        )
+        resp = self.get(case_result['extra'].pop('location'))
         self.assertEqual(resp.status_code, 200)
         self.assertDictEqual(case_result, self.get_json(resp))
 

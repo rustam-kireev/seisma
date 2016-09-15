@@ -6,13 +6,17 @@ import flask
 
 from .. import string
 from ..result import make_result
+from ..utils import api_location
 from ..resource import ApiResource
 from ..utils import paginated_query
 from ...database import schema as db
 from ...constants import API_AUTO_CREATION_PARAM
 
 
-resource = ApiResource(__name__, version=1)
+VERSION = 1
+
+
+resource = ApiResource(__name__, version=VERSION)
 
 
 @resource.route('/jobs/<string:job_name>/cases/<string:case_name>', methods=['GET'])
@@ -62,6 +66,11 @@ def add_case_to_job(job_name, case_name):
         return make_result(
             case,
             job=job,
+            location=api_location(
+                '/jobs/{}/cases/{}',
+                job_name, case_name,
+                version=VERSION,
+            ),
         ), statuses.CREATED
 
 
@@ -144,10 +153,10 @@ def get_stats_of_case_from_job(job_name, case_name):
 
             return make_result(
                 query.all(),
-                total_count=query.total_count,
-                current_count=query.current_count,
                 job=job,
                 case=case,
+                total_count=query.total_count,
+                current_count=query.current_count,
             ), statuses.OK
 
 
@@ -204,6 +213,11 @@ def add_case_to_build(job_name, build_name, case_name):
                     job=job,
                     case=case,
                     build=build,
+                    location=api_location(
+                        '/jobs/{}/builds/{}/cases/{}',
+                        job_name, build_name, case_name,
+                        version=VERSION,
+                    ),
                 ), statuses.CREATED
 
 
@@ -289,7 +303,7 @@ def get_cases_stats_from_job(job_name):
 
         return make_result(
             query.all(),
+            job=job,
             total_count=query.total_count,
             current_count=query.current_count,
-            job=job,
         ), statuses.OK

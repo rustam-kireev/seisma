@@ -11,9 +11,12 @@ from ..json import ObjectConverter
 from .descriptors import MetadataProperty
 
 
-class Build(alchemy.Model, ModelMixin):
+CASE_STATUSES_CHOICE = ('passed', 'skipped', 'failed', 'error')
 
-    __tablename__ = 'build'
+
+class Job(alchemy.Model, ModelMixin):
+
+    __tablename__ = 'job'
 
     id = alchemy.Column(alchemy.Integer, autoincrement=True, primary_key=True)
     created = alchemy.Column(alchemy.Date(), nullable=False, default=date.today)
@@ -27,13 +30,17 @@ class Build(alchemy.Model, ModelMixin):
         ObjectConverter.FromAttribute('description'),
     )
 
+    @classmethod
+    def get_by_name(cls, name):
+        return cls.query.filter_by(name=name, is_active=True).first()
+
 
 class Case(alchemy.Model, ModelMixin):
 
     __tablename__ = 'case'
 
     id = alchemy.Column(alchemy.Integer, autoincrement=True, primary_key=True)
-    build_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('build.id'), nullable=False)
+    job_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('job.id'), nullable=False)
     created = alchemy.Column(alchemy.Date(), nullable=False, default=date.today)
     name = alchemy.Column(alchemy.String(255), nullable=False, index=True)
     description = alchemy.Column(alchemy.Text(), nullable=False, default='')
@@ -45,30 +52,30 @@ class Case(alchemy.Model, ModelMixin):
     )
 
 
-class BuiltResultMetadata(alchemy.Model, ModelMixin):
+class BuildMetadata(alchemy.Model, ModelMixin):
 
-    __tablename__ = 'build_result_metadata'
+    __tablename__ = 'build_metadata'
 
     id = alchemy.Column(alchemy.Integer, autoincrement=True, primary_key=True)
-    build_result_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('build_result.id'), nullable=False)
+    build_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('build.id'), nullable=False)
     key = alchemy.Column(alchemy.String(255), nullable=False)
     value = alchemy.Column(alchemy.Text(), nullable=False)
 
 
-class BuildResult(alchemy.Model, ModelMixin):
+class Build(alchemy.Model, ModelMixin):
 
-    __tablename__ = 'build_result'
+    __tablename__ = 'build'
 
     __table_args__ = (
         UniqueConstraint(
             'name',
-            'build_id',
-            name='result_of_build',
+            'job_id',
+            name='build_name',
         ),
     )
 
     id = alchemy.Column(alchemy.Integer, autoincrement=True, primary_key=True)
-    build_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('build.id'), nullable=False)
+    job_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('job.id'), nullable=False)
     name = alchemy.Column(alchemy.String(255), nullable=False)
     date = alchemy.Column(alchemy.DateTime(), nullable=False, default=datetime.now)
     tests_count = alchemy.Column(alchemy.Integer, nullable=False, default=0)
@@ -79,12 +86,11 @@ class BuildResult(alchemy.Model, ModelMixin):
     was_success = alchemy.Column(alchemy.Boolean(), nullable=False)
     is_running = alchemy.Column(alchemy.Boolean(), nullable=False, default=True)
 
-    md = MetadataProperty(BuiltResultMetadata, fk='build_result_id')
+    md = MetadataProperty(BuildMetadata, fk='build_id')
 
     to_dict = ObjectConverter(
         ObjectConverter.FromAttribute('name'),
         ObjectConverter.FromAttribute('date'),
-        ObjectConverter.FromAttribute('build'),
         ObjectConverter.FromAttribute('runtime'),
         ObjectConverter.FromAttribute('fail_count'),
         ObjectConverter.FromAttribute('is_running'),
@@ -94,10 +100,6 @@ class BuildResult(alchemy.Model, ModelMixin):
         ObjectConverter.FromAttribute('success_count'),
         ObjectConverter.FromAttribute('md', alias='metadata'),
     )
-
-    @property
-    def build(self):
-        return Build.query.filter_by(id=self.build_id).first()
 
 
 class CaseResultMetadata(alchemy.Model, ModelMixin):
@@ -116,11 +118,11 @@ class CaseResult(alchemy.Model, ModelMixin):
 
     id = alchemy.Column(alchemy.Integer, autoincrement=True, primary_key=True)
     case_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('case.id'), nullable=False)
-    build_result_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('build_result.id'), nullable=False)
+    build_id = alchemy.Column(alchemy.Integer, alchemy.ForeignKey('build.id'), nullable=False)
     date = alchemy.Column(alchemy.DateTime(), nullable=False, default=datetime.now)
     reason = alchemy.Column(alchemy.Text(), nullable=False, default='')
     runtime = alchemy.Column(alchemy.Float(), nullable=False)
-    status = alchemy.Column(alchemy.Enum('passed', 'skipped', 'failed', 'error'), nullable=False)
+    status = alchemy.Column(alchemy.Enum(*CASE_STATUSES_CHOICE), nullable=False)
 
     md = MetadataProperty(CaseResultMetadata, fk='case_result_id')
 

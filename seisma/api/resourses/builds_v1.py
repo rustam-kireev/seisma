@@ -4,72 +4,43 @@ from http import HTTPStatus as statuses
 
 import flask
 
-from ..utils import cast_to_int
+from .. import string
 from ..result import make_result
-from ..utils import cast_to_float
 from ..resource import ApiResource
 from ..utils import paginated_query
 from ...database import schema as db
-from ..utils import string_to_datetime
 
 
 resource = ApiResource(__name__, version=1)
 
 
-def _get_build_by_name(name):
-    return db.Build.query.filter_by(
-        name=name, is_active=True,
-    ).first()
+@resource.route('/jobs/<string:job_name>/builds', methods=['GET'])
+def get_builds_from_job(job_name):
+    """
+    Get builds from job.
 
+    METHOD: GET
+    PATH: /api/v1/jobs/<string:job_name>/builds
 
-@resource.route('/builds', methods=['GET'])
-def get_builds():
-    query = db.Build.query.filter_by(is_active=True)
-    query = paginated_query(query, flask.request)
+    GET params
 
-    return make_result(
-        query.all(),
-        total_count=query.total_count,
-        current_count=query.current_count,
-    ), statuses.OK
+        * date_to: where data less or equal than value.
+        * date_from: where data more or equal than value.
+        * runtime_more: where runtime more than value. (float)
+        * runtime_less: where runtime less than value. (float)
+        * fail_count_more: where fail count more than value. (integer)
+        * fail_count_less: where fail count less than value. (integer)
+        * error_count_more: where error count more than value. (integer)
+        * error_count_less: where error count less than value. (integer)
+        * success_count_more: where success count more than value. (integer)
+        * success_count_less: where success count less than value. (integer)
+        * was_success: was success after run build, yes or no. choice from (true, false).
+    """
+    job = db.Job.get_by_name(job_name)
 
-
-@resource.route('/builds', methods=['POST'], schema='build.post.json')
-def create_build():
-    data = {
-        'is_active': True,
-        'name': flask.request.json.get('name'),
-        'description': flask.request.json.get('description'),
-    }
-    build = db.Build.create(**data)
-
-    return make_result(build), statuses.CREATED
-
-
-@resource.route('/builds/<string:name>', methods=['GET'])
-def get_build_by_name(name):
-    build = _get_build_by_name(name)
-
-    if build:
-        return make_result(build), statuses.OK
-
-
-@resource.route('/builds/<string:name>', methods=['DELETE'])
-def delete_build_by_name(name):
-    build = _get_build_by_name(name)
-
-    if build:
-        build.update(is_active=False)
-        return make_result(build), statuses.OK
-
-
-@resource.route('/builds/<string:name>/results', methods=['GET'])
-def get_build_results(name):
-    build = _get_build_by_name(name)
-
-    if build:
+    if job:
         filters = {
-            'build_id': build.id,
+            'job_id': job.id,
         }
 
         date_to = flask.request.args.get('date_to', None)
@@ -84,40 +55,38 @@ def get_build_results(name):
         success_count_more = flask.request.args.get('success_count_more', None)
         success_count_less = flask.request.args.get('success_count_less', None)
 
-        if was_success == 'false':
-            filters['was_success'] = False
-        elif was_success == 'true':
-            filters['was_success'] = True
+        if was_success is not None:
+            filters['was_success'] = string.to_bool(was_success)
 
-        query = db.BuildResult.query.filter_by(**filters)
+        query = db.Build.query.filter_by(**filters)
 
         if date_from is not None:
-            date_from = string_to_datetime(date_from, no_time=True)
-            query = query.filter(db.BuildResult.date >= date_from)
+            date_from = string.to_datetime(date_from, no_time=True)
+            query = query.filter(db.Build.date >= date_from)
 
         if date_to is not None:
-            date_to = string_to_datetime(date_to, no_time=True, to_end_day=True)
-            query = query.filter(db.BuildResult.date <= date_to)
+            date_to = string.to_datetime(date_to, no_time=True, to_end_day=True)
+            query = query.filter(db.Build.date <= date_to)
 
         if runtime_more is not None:
-            query = query.filter(db.BuildResult.runtime > cast_to_float(runtime_more))
+            query = query.filter(db.Build.runtime > string.to_float(runtime_more))
         elif runtime_less is not None:
-            query = query.filter(db.BuildResult.runtime < cast_to_float(runtime_less))
+            query = query.filter(db.Build.runtime < string.to_float(runtime_less))
 
         if fail_count_more is not None:
-            query = query.filter(db.BuildResult.fail_count > cast_to_int(fail_count_more))
+            query = query.filter(db.Build.fail_count > string.to_int(fail_count_more))
         elif fail_count_less is not None:
-            query = query.filter(db.BuildResult.fail_count < cast_to_int(fail_count_less))
+            query = query.filter(db.Build.fail_count < string.to_int(fail_count_less))
 
         if error_count_more is not None:
-            query = query.filter(db.BuildResult.error_count > cast_to_int(error_count_more))
+            query = query.filter(db.Build.error_count > string.to_int(error_count_more))
         elif error_count_less is not None:
-            query = query.filter(db.BuildResult.error_count < cast_to_int(error_count_less))
+            query = query.filter(db.Build.error_count < string.to_int(error_count_less))
 
         if success_count_more is not None:
-            query = query.filter(db.BuildResult.success_count > cast_to_int(success_count_more))
+            query = query.filter(db.Build.success_count > string.to_int(success_count_more))
         elif success_count_less is not None:
-            query = query.filter(db.BuildResult.success_count < cast_to_int(success_count_less))
+            query = query.filter(db.Build.success_count < string.to_int(success_count_less))
 
         query = paginated_query(query, flask.request)
 
@@ -125,18 +94,38 @@ def get_build_results(name):
             query.all(),
             total_count=query.total_count,
             current_count=query.current_count,
-            build=build,
+            job=job,
         ), statuses.OK
 
 
-@resource.route('/builds/<string:name>/results', methods=['POST'], schema='build_result.post.json')
-def create_build_result(name):
-    build = _get_build_by_name(name)
+@resource.route(
+    '/jobs/<string:job_name>/builds/<string:build_name>/start',
+    methods=['POST'],
+    schema='start_build.post.json',
+)
+def start_build(job_name, build_name):
+    """
+    Start a new build.
+    The mission of command is initialization a build what will glue case results.
+    All statistic may be written with stop command.
+    When build is created then it status is running while a build does'n stop.
 
-    if build:
+    METHOD: POST
+    PATH: /api/v1/jobs/<string:job_name>/builds/<string:build_name>/start
+
+    JSON params:
+
+        * metadata: dictionary with contains info about your build.
+            Key and value can be of string type only.
+    """
+    job = db.Job.get_by_name(job_name)
+
+    if job:
+        json = flask.request.get_json()
+
         data = {
-            'build_id': build.id,
-            'name': flask.request.json.get('name'),
+            'job_id': job.id,
+            'name': build_name,
             'runtime': 0.0,
             'fail_count': 0,
             'error_count': 0,
@@ -146,232 +135,86 @@ def create_build_result(name):
             'was_success': False,
 
         }
-        metadata = flask.request.json.get('metadata')
+        metadata = json.get('metadata')
 
-        build_result = db.BuildResult.create(**data)
+        build = db.Build.create(**data)
 
         if metadata:
-            build_result.md = metadata
+            build.md = metadata
 
         return make_result(
-            build_result,
-            build=build,
+            build,
+            job=job,
         ), statuses.CREATED
 
 
-@resource.route('/builds/<string:name>/results/<string:result_name>', methods=['PUT'])
-def update_build_result(name, result_name):
-    build = _get_build_by_name(name)
+@resource.route(
+    '/jobs/<string:job_name>/builds/<string:build_name>/stop',
+    methods=['PUT'],
+    schema='stop_build.put.json',
+)
+def stop_build(job_name, build_name):
+    """
+    Stop a build.
+    The command is for creation statistic of a build what started earlier.
+    A build will has status is_running=False after first call to the command with success.
 
-    if build:
-        query = db.BuildResult.query.filter_by(
-            build_id=build.id, name=result_name,
-        )
-        build_result = query.first()
+    METHOD: PUT
+    PATH: /api/v1/jobs/<string:job_name>/builds/<string:build_name>/stop
 
-        if build_result:
+    JSON params:
+
+        * runtime: time of execution (float, required)
+        * was_success: was success or no (boolean, required)
+        * tests_count: (integer, required)
+        * success_count: (integer, required)
+        * fail_count: (integer, required)
+        * error_count: (integer, required)
+    """
+    job = db.Job.get_by_name(job_name)
+
+    if job:
+        build = db.Build.query.filter_by(
+            job_id=job.id, name=build_name,
+        ).first()
+
+        if build:
+            json = flask.request.get_json()
+
             data = {
                 'is_running': False,
-                'runtime': flask.request.json.get('runtime'),
-                'was_success': flask.request.json.get('was_success'),
-                'tests_count': flask.request.json.get('tests_count'),
-                'success_count': flask.request.json.get('success_count'),
-                'fail_count': flask.request.json.get('fail_count'),
-                'error_count': flask.request.json.get('error_count'),
+                'runtime': json.get('runtime'),
+                'was_success': json.get('was_success'),
+                'tests_count': json.get('tests_count'),
+                'success_count': json.get('success_count'),
+                'fail_count': json.get('fail_count'),
+                'error_count': json.get('error_count'),
             }
-            build_result.update(**data)
+            build.update(**data)
 
             return make_result(
-                build_result,
-                build=build,
+                build,
+                job=job,
             ), statuses.OK
 
 
-@resource.route('/builds/<string:name>/results/<string:result_name>', methods=['GET'])
-def get_build_result(name, result_name):
-    build = _get_build_by_name(name)
+@resource.route('/jobs/<string:job_name>/builds/<string:build_name>', methods=['GET'])
+def get_build_by_name(job_name, build_name):
+    """
+    Get only one build by name.
 
-    if build:
-        query = db.BuildResult.query.filter_by(
-            build_id=build.id, name=result_name,
-        )
-        build_result = query.first()
+    METHOD: GET
+    PATH: /api/v1/jobs/<string:job_name>/builds/<string:build_name>
+    """
+    job = db.Job.get_by_name(job_name)
 
-        if build_result:
+    if job:
+        build = db.Build.query.filter_by(
+            job_id=job.id, name=build_name,
+        ).first()
+
+        if build:
             return make_result(
-                build_result,
-                build=build,
+                build,
+                job=job,
             ), statuses.OK
-
-
-@resource.route('/builds/<string:name>/cases/<string:case_name>', methods=['GET'])
-def get_case(name, case_name):
-    build = _get_build_by_name(name)
-
-    if build:
-        case = db.Case.query.filter_by(build_id=build.id, name=case_name).first()
-
-        if case:
-            return make_result(
-                case,
-                build=build,
-            ), statuses.OK
-
-
-@resource.route('/builds/<string:name>/cases', methods=['POST'], schema='case.post.json')
-def create_case(name):
-    build = _get_build_by_name(name)
-
-    if build:
-        data = {
-            'build_id': build.id,
-            'name': flask.request.json.get('name'),
-            'description': flask.request.json.get('description'),
-        }
-        case = db.Case.create(**data)
-
-        return make_result(
-            case,
-            build=build,
-        ), statuses.CREATED
-
-
-@resource.route('/builds/<string:name>/cases', methods=['GET'])
-def get_cases(name):
-    build = _get_build_by_name(name)
-
-    if build:
-        query = db.Case.query.filter_by(build_id=build.id)
-        query = paginated_query(query, flask.request)
-
-        return make_result(
-            query.all(),
-            total_count=query.total_count,
-            current_count=query.current_count,
-            build=build,
-        ), statuses.OK
-
-
-@resource.route('/builds/<string:name>/cases/<string:case_name>/results', methods=['GET'])
-def get_case_results(name, case_name):
-    build = _get_build_by_name(name)
-
-    if build:
-        case = db.Case.query.filter_by(build_id=build.id, name=case_name).first()
-
-        if case:
-            query = db.CaseResult.query.filter_by(case_id=case.id)
-            query = paginated_query(query, flask.request)
-
-            return make_result(
-                query.all(),
-                total_count=query.total_count,
-                current_count=query.current_count,
-                build=build,
-                case=case,
-            ), statuses.OK
-
-
-@resource.route(
-    '/builds/<string:name>/results/<string:result_name>/cases/<string:case_name>',
-    methods=['POST'],
-    schema='case_result.post.json',
-)
-def create_case_result(name, result_name, case_name):
-    build = _get_build_by_name(name)
-
-    if build:
-        build_result = db.BuildResult.query.filter_by(build_id=build.id, name=result_name).first()
-
-        if build_result:
-            case = db.Case.query.filter_by(build_id=build.id, name=case_name).first()
-
-            if case:
-                data = {
-                    'case_id': case.id,
-                    'build_result_id': build_result.id,
-                    'status': flask.request.json.get('status'),
-                    'runtime': flask.request.json.get('runtime'),
-                    'reason': flask.request.json.get('reason', ''),
-                }
-                metadata = flask.request.json.get('metadata')
-
-                case_result = db.CaseResult.create(**data)
-
-                if metadata:
-                    case_result.md = metadata
-
-                return make_result(
-                    case_result,
-                    build_result=build_result,
-                    build=build,
-                    case=case,
-                ), statuses.CREATED
-
-
-@resource.route(
-    '/builds/<string:name>/results/<string:result_name>/cases/<string:case_name>',
-    methods=['GET'],
-)
-def get_case_result(name, result_name, case_name):
-    build = _get_build_by_name(name)
-
-    if build:
-        build_result = db.BuildResult.query.filter_by(build_id=build.id, name=result_name).first()
-
-        if build_result:
-            case = db.Case.query.filter_by(build_id=build.id, name=case_name).first()
-
-            if case:
-                case_result = db.CaseResult.query.filter_by(
-                    build_result_id=build_result.id, case_id=case.id,
-                ).first()
-
-                if case_result:
-                    return make_result(
-                        case_result,
-                        build_result=build_result,
-                        build=build,
-                        case=case,
-                    ), statuses.OK
-
-
-@resource.route('/builds/<string:name>/cases/results')
-def get_all_case_results_from_build(name):
-    build = _get_build_by_name(name)
-
-    if build:
-        status = flask.request.args.get('status', None)
-        date_to = flask.request.args.get('date_to', None)
-        date_from = flask.request.args.get('date_from', None)
-        runtime_more = flask.request.args.get('runtime_more', None)
-        runtime_less = flask.request.args.get('runtime_less', None)
-
-        query = db.CaseResult.query.join(
-            db.BuildResult,
-        ).filter(db.BuildResult.build_id == build.id)
-
-        if date_from is not None:
-            date_from = string_to_datetime(date_from, no_time=True)
-            query = query.filter(db.CaseResult.date >= date_from)
-
-        if date_to is not None:
-            date_to = string_to_datetime(date_to, no_time=True, to_end_day=True)
-            query = query.filter(db.CaseResult.date <= date_to)
-
-        if status in ('passed', 'skipped', 'failed', 'error'):
-            query = query.filter(db.CaseResult.status == status)
-
-        if runtime_more is not None:
-            query = query.filter(db.CaseResult.runtime > cast_to_float(runtime_more))
-        elif runtime_less is not None:
-            query = query.filter(db.CaseResult.runtime < cast_to_float(runtime_less))
-
-        query = paginated_query(query, flask.request)
-
-        return make_result(
-            query.all(),
-            total_count=query.total_count,
-            current_count=query.current_count,
-            build=build,
-        ), statuses.OK

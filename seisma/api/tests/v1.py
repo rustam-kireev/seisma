@@ -4,8 +4,8 @@ from .tools import random_name
 from .base import BaseApiTestCse
 
 
+job = None
 build = None
-build_result = None
 
 case = None
 case_result = None
@@ -13,67 +13,73 @@ case_result = None
 
 class TestFullCycle(BaseApiTestCse):
 
-    def test_01_build_does_not_exist(self):
-        resp = self.get('/api/v1/builds/qweasdzxc')
+    def test_01_job_does_not_exist(self):
+        resp = self.get('/api/v1/jobs/qweasdzxc')
         self.assertEqual(resp.status_code, 404)
 
-    def test_02_create_build(self):
-        global build
+    def test_02_create_job(self):
+        global job
 
+        name = random_name()
         data = {
-            'name': random_name(),
             'description': 'It is a build from test',
         }
-        resp = self.post('/api/v1/builds', data)
+        resp = self.post('/api/v1/jobs/{}'.format(name), data)
         self.assertEqual(resp.status_code, 201)
 
-        build = self.get_json(resp)
-        self.assertEqual(build['result']['name'], data['name'])
-        self.assertEqual(build['result']['description'], data['description'])
+        job = self.get_json(resp)
+        self.assertEqual(job['result']['name'], name)
+        self.assertEqual(job['result']['description'], data['description'])
 
     def test_03_case_does_not_exist(self):
-        resp = self.get('/api/v1/builds/{}/cases/asdzxsdfgcscd'.format(build['result']['name']))
+        resp = self.get('/api/v1/jobs/{}/cases/asdzxsdfgcscd'.format(job['result']['name']))
         self.assertEqual(resp.status_code, 404)
 
     def test_04_create_case(self):
         global case
 
+        name = random_name()
         data = {
-            'name': random_name(),
             'description': 'It is a case from test',
         }
-        resp = self.post('/api/v1/builds/{}/cases'.format(build['result']['name']), data)
+        resp = self.post(
+            '/api/v1/jobs/{}/cases/{}'.format(
+                job['result']['name'],
+                name,
+            ),
+            data,
+        )
         self.assertEqual(resp.status_code, 201)
 
         case = self.get_json(resp)
-        self.assertEqual(case['result']['name'], data['name'])
+        self.assertEqual(case['result']['name'], name)
         self.assertEqual(case['result']['description'], data['description'])
 
-    def test_05_build_result_does_not_exist(self):
-        resp = self.get('/api/v1/builds/{}/results/asdvslfjsdjf'.format(build['result']['name']))
+    def test_05_build_does_not_exist(self):
+        resp = self.get('/api/v1/jobs/{}/builds/asdvslfjsdjf'.format(job['result']['name']))
         self.assertEqual(resp.status_code, 404)
 
-    def test_06_create_build_result(self):
-        global build_result
+    def test_06_start_build(self):
+        global build
 
+        name = random_name()
         data = {
-            'name': random_name(),
             'metadata': {
                 'issue': 'http://localhost/TRG-13432',
             },
         }
-        resp = self.post('/api/v1/builds/{}/results'.format(build['result']['name']), data)
+        resp = self.post('/api/v1/jobs/{}/builds/{}/start'.format(job['result']['name'], name), data)
         self.assertEqual(resp.status_code, 201)
 
-        build_result = self.get_json(resp)
+        build = self.get_json(resp)
 
-        for k in data:
-            self.assertEqual(data[k], build_result['result'][k], '{}'.format(k))
+        self.assertEqual(build['result']['name'], name)
+        self.assertEqual(build['result']['is_running'], True)
+        self.assertEqual(build['result']['was_success'], False)
+        self.assertDictEqual(build['result']['metadata'], data['metadata'])
 
-        self.assertDictEqual(build_result['result']['metadata'], data['metadata'])
-
-    def test_07_update_build_result(self):
-        global build_result
+    def test_07_stop_build(self):
+        global build
 
         data = {
             'was_success': True,
@@ -84,23 +90,24 @@ class TestFullCycle(BaseApiTestCse):
             'runtime': 148.46,
         }
         resp = self.put(
-            '/api/v1/builds/{}/results/{}'.format(
+            '/api/v1/jobs/{}/builds/{}/stop'.format(
+                job['result']['name'],
                 build['result']['name'],
-                build_result['result']['name'],
             ),
             data,
         )
 
-        build_result = self.get_json(resp)
+        build = self.get_json(resp)
 
         for k in data:
-            self.assertEqual(data[k], build_result['result'][k], '{}'.format(k))
+            self.assertEqual(data[k], build['result'][k], '{}'.format(k))
+        self.assertEqual(build['result']['is_running'], False)
 
     def test_08_case_result_does_not_exist(self):
         resp = self.get(
-            '/api/v1/builds/{}/results/{}/cases/sdkjjksdjkncd'.format(
+            '/api/v1/jobs/{}/builds/{}/cases/sdkjjksdjkncd'.format(
+                job['result']['name'],
                 build['result']['name'],
-                build_result['result']['name'],
             ),
         )
         self.assertEqual(resp.status_code, 404)
@@ -117,9 +124,9 @@ class TestFullCycle(BaseApiTestCse):
             },
         }
         resp = self.post(
-            '/api/v1/builds/{}/results/{}/cases/{}'.format(
+            '/api/v1/jobs/{}/builds/{}/cases/{}'.format(
+                job['result']['name'],
                 build['result']['name'],
-                build_result['result']['name'],
                 case['result']['name'],
             ),
             data,
@@ -133,79 +140,79 @@ class TestFullCycle(BaseApiTestCse):
 
         self.assertDictEqual(case_result['result']['metadata'], data['metadata'])
 
-    def test_10_get_build(self):
-        resp = self.get('/api/v1/builds/{}'.format(build['result']['name']))
+    def test_10_get_job(self):
+        resp = self.get('/api/v1/jobs/{}'.format(job['result']['name']))
         self.assertEqual(resp.status_code, 200)
-        self.assertDictEqual(build, self.get_json(resp))
+        self.assertDictEqual(job, self.get_json(resp))
 
     def test_11_get_case(self):
         resp = self.get(
-            '/api/v1/builds/{}/cases/{}'.format(
-                build['result']['name'],
+            '/api/v1/jobs/{}/cases/{}'.format(
+                job['result']['name'],
                 case['result']['name'],
             ),
         )
         self.assertEqual(resp.status_code, 200)
         self.assertDictEqual(case, self.get_json(resp))
 
-    def test_12_get_build_result(self):
+    def test_12_get_build(self):
         resp = self.get(
-            '/api/v1/builds/{}/results/{}'.format(
+            '/api/v1/jobs/{}/builds/{}'.format(
+                job['result']['name'],
                 build['result']['name'],
-                build_result['result']['name'],
             ),
         )
         self.assertEqual(resp.status_code, 200)
-        self.assertDictEqual(build_result, self.get_json(resp))
+        self.assertDictEqual(build, self.get_json(resp))
 
     def test_13_get_case_result(self):
         resp = self.get(
-            '/api/v1/builds/{}/results/{}/cases/{}'.format(
+            '/api/v1/jobs/{}/builds/{}/cases/{}'.format(
+                job['result']['name'],
                 build['result']['name'],
-                build_result['result']['name'],
                 case['result']['name'],
             ),
         )
         self.assertEqual(resp.status_code, 200)
         self.assertDictEqual(case_result, self.get_json(resp))
 
-    def test_14_get_build_list(self):
-        resp = self.get('/api/v1/builds')
+    def test_14_get_job_list(self):
+        resp = self.get('/api/v1/jobs')
         self.assertEqual(resp.status_code, 200)
-        self.assertIn(build['result'], self.get_json(resp)['result'])
+        self.assertIn(job['result'], self.get_json(resp)['result'])
 
-    def test_15_get_case_list(self):
-        resp = self.get('/api/v1/builds/{}/cases'.format(build['result']['name']))
+    def test_15_get_case_list_from_job(self):
+        resp = self.get('/api/v1/jobs/{}/cases'.format(job['result']['name']))
         self.assertEqual(resp.status_code, 200)
         self.assertIn(case['result'], self.get_json(resp)['result'])
 
-    def test_16_get_build_result_list(self):
-        resp = self.get('/api/v1/builds/{}/results'.format(build['result']['name']))
+    def test_16_get_build_list_from_job(self):
+        resp = self.get('/api/v1/jobs/{}/builds'.format(job['result']['name']))
         self.assertEqual(resp.status_code, 200)
-        self.assertIn(build_result['result'], self.get_json(resp)['result'])
+        self.assertIn(build['result'], self.get_json(resp)['result'])
 
-    def test_17_get_case_result_list(self):
+    def test_17_get_case_stats(self):
         resp = self.get(
-            '/api/v1/builds/{}/cases/{}/results'.format(
-                build['result']['name'],
+            '/api/v1/jobs/{}/cases/{}/stat'.format(
+                job['result']['name'],
                 case['result']['name'],
             ),
         )
         self.assertEqual(resp.status_code, 200)
         self.assertIn(case_result['result'], self.get_json(resp)['result'])
 
-    def test_18_get_build_results_by_dates(self):
+    def test_18_get_builds_by_dates(self):
         resp = self.get(
-            '/api/v1/builds/{}/results?data_from=2015-03-23&date_to=2015-04-20'.format(
-                build['result']['name'],
+            '/api/v1/jobs/{}/builds?data_from=2015-03-23&date_to=2015-04-20'.format(
+                job['result']['name'],
             ),
         )
         self.assertEqual(resp.status_code, 200)
         self.assertFalse(self.get_json(resp)['result'])
 
         resp = self.get(
-            '/api/v1/builds/{}/results'.format(
-                build['result']['name'],
+            '/api/v1/jobs/{}/builds'.format(
+                job['result']['name'],
             ),
         )
         self.assertEqual(resp.status_code, 200)
@@ -214,8 +221,8 @@ class TestFullCycle(BaseApiTestCse):
         self.assertEqual(data['extra']['total_count'], 1)
         self.assertEqual(data['extra']['current_count'], 1)
 
-    def test_19_get_all_case_results_from_build(self):
-        resp = self.get('/api/v1/builds/{}/cases/results'.format(build['result']['name']))
+    def test_19_get_stat_of_cases_from_job(self):
+        resp = self.get('/api/v1/jobs/{}/cases/stat'.format(job['result']['name']))
         data = self.get_json(resp)
 
         self.assertEqual(resp.status_code, 200)

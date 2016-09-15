@@ -9,6 +9,7 @@ from ..result import make_result
 from ..resource import ApiResource
 from ..utils import paginated_query
 from ...database import schema as db
+from ...constants import API_AUTO_CREATION_PARAM
 
 
 resource = ApiResource(__name__, version=1)
@@ -119,6 +120,9 @@ def start_build(job_name, build_name):
             Key and value can be of string type only.
     """
     job = db.Job.get_by_name(job_name)
+
+    if not job and flask.request.args.get(API_AUTO_CREATION_PARAM):
+        job = db.Job.create(name=job_name)
 
     if job:
         json = flask.request.get_json()

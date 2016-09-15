@@ -3,7 +3,7 @@
 import os
 
 
-TESTING_MODE = os.getenv('SEISMA_TESTING', False)
+TESTING_MODE = bool(os.getenv('SEISMA_TESTING', False))
 
 USER_HOME = os.path.expanduser('~')
 
@@ -53,3 +53,6 @@ else:
 
 
 os.environ.setdefault(CONFIG_ENV_NAME, DEFAULT_CONFIG)
+
+
+API_AUTO_CREATION_PARAM = 'auto_creation'

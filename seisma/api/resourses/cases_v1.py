@@ -9,6 +9,7 @@ from ..result import make_result
 from ..resource import ApiResource
 from ..utils import paginated_query
 from ...database import schema as db
+from ...constants import API_AUTO_CREATION_PARAM
 
 
 resource = ApiResource(__name__, version=1)
@@ -35,9 +36,9 @@ def get_case_from_job(job_name, case_name):
 
 
 @resource.route('/jobs/<string:job_name>/cases/<string:case_name>', methods=['POST'], schema='case.post.json')
-def create_case_on_job(job_name, case_name):
+def add_case_to_job(job_name, case_name):
     """
-    Add case to job, statistic about case store separated of case data.
+    Add case to job, statistic about case stored separated of case data.
 
     METHOD: POST
     PATH: /api/v1/jobs/<string:job_name>/cases/<string:case_name>
@@ -92,7 +93,7 @@ def get_cases_from_job(job_name):
 
 
 @resource.route('/jobs/<string:job_name>/cases/<string:case_name>/stat', methods=['GET'])
-def get_stat_of_case_from_job(job_name, case_name):
+def get_stats_of_case_from_job(job_name, case_name):
     """
     Get statistic of case from job.
 
@@ -155,9 +156,9 @@ def get_stat_of_case_from_job(job_name, case_name):
     methods=['POST'],
     schema='case_result.post.json',
 )
-def create_case_result_on_build(job_name, build_name, case_name):
+def add_case_to_build(job_name, build_name, case_name):
     """
-    Add result of case execution to a build.
+    Add case to a build.
 
     METHOD: POST
     PATH: /api/v1/jobs/<string:job_name>/builds/<string:build_name>/cases/<string:case_name>
@@ -177,6 +178,9 @@ def create_case_result_on_build(job_name, build_name, case_name):
 
         if build:
             case = db.Case.query.filter_by(job_id=job.id, name=case_name).first()
+
+            if not case and flask.request.args.get(API_AUTO_CREATION_PARAM):
+                case = db.Case.create(name=case_name, job_id=job.id)
 
             if case:
                 json = flask.request.get_json()
@@ -207,7 +211,7 @@ def create_case_result_on_build(job_name, build_name, case_name):
     '/jobs/<string:job_name>/builds/<string:build_name>/cases/<string:case_name>',
     methods=['GET'],
 )
-def get_case_result(job_name, build_name, case_name):
+def get_case_from_build(job_name, build_name, case_name):
     """
     Get only one case result from a build by case name.
 
@@ -237,9 +241,9 @@ def get_case_result(job_name, build_name, case_name):
 
 
 @resource.route('/jobs/<string:job_name>/cases/stat')
-def get_case_results_from_job(job_name):
+def get_cases_stats_from_job(job_name):
     """
-    Get case results from job.
+    Get statistic of cases from job.
 
     METHOD: GET
     PATH: /api/v1/jobs/<string:job_name>/cases/stat

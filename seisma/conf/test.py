@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from seisma.default_config import *
+from seisma.conf.default import *
 
 
 DEBUG = True

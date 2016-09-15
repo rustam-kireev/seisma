@@ -38,7 +38,7 @@ if TESTING_MODE:
     DEFAULT_CONFIG = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
-            'test_config.py',
+            'conf', 'test.py',
         ),
     )
     MIGRATE_DIR = TEST_MIGRATE_DIR
@@ -46,7 +46,7 @@ else:
     DEFAULT_CONFIG = os.path.abspath(
         os.path.join(
             os.path.dirname(__file__),
-            'default_config.py',
+            'conf', 'default.py',
         ),
     )
     MIGRATE_DIR = PRODUCTION_MIGRATE_DIR
